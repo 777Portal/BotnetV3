@@ -44,9 +44,9 @@ function spawnAndBind(email){
 	
 	console.log(`Using ${email} as email.`)
 	
-	bot.on(event, function (...args){
-		console.log(event, args);
-	});
+	// bot.on(event, function (...args){
+	// 	console.log(event, args);
+	// });
 
 	bot.on('end', function(reason){
 		console.log(email)
