@@ -34,10 +34,10 @@ io.on('connection', (socket) => {
     if (bots.length > 0) {
         console.log("Sending bots to new user");
         bots.forEach(bot => {
-            socket.emit('bot', { socketId: bot.socketId, username: bot.username });
-			console.log("requesting pos update");
-			io.to(bot.socketId).emit('reqPosUpdate'); // requesting location data...
-    });
+          socket.emit('bot', { socketId: bot.socketId, username: bot.username });
+		  console.log("requesting pos update");
+		  io.to(bot.socketId).emit('reqPosUpdate'); // requesting location data...
+		});
 }
 
 // debug stuffz
@@ -65,7 +65,7 @@ socket.on("conn", (connInfo) => {
 	// would be bot.
 	bots.push({ socketId: socket.id, username: connInfo.username, email: connInfo.email });
 	  emailIndex = accounts.indexOf(connInfo.email)
-	  accounts.splice(emailIndex, 1);
+	  accounts = accounts.splice(emailIndex, 1);
 	
 	io.emit("bot", { socketId: socket.id, username: connInfo.username, emailsLeft: accounts.length});
 });
@@ -81,27 +81,25 @@ socket.on('sendChat', (rawData) => {
 })
 
 // routing data from webviews to bots
-socket.on("chatMsg", (data) => {
+socket.on("message", (data) => {
 	const existingBot = bots.find(bot => bot.socketId === socket.id); // checking if bot's socket id is in the bot list
     if (existingBot) { 
 		viewers.forEach(viewer => {
-			io.to(viewer).emit("chatMsg", {username: data.bot, message: data.message}); // sending data to all of the webviewers connected.
+			io.to(viewer).emit("chatMsg", {username: getUsernameBySocketId(socket.id), message: data}); // sending data to all of the webviewers connected.
 		})
 	} else {
 		console.log(`${socket.id} is attempting to send bot data as non bot - attempted to send chat message ${data.message}` )
-		io.sockets.sockets[socket.id].disconnect();
 	}
 });
 
-socket.on("posUpdate", (data) => {
+socket.on("move", (data) => {
 	const existingBot = bots.find(bot => bot.socketId === socket.id);
     if (existingBot) {
 		viewers.forEach(viewer => {
-			io.to(viewer).emit("posUpdate", {username: data.username, x: data.x, y: data.y, z: data.z});
+			io.to(viewer).emit("posUpdate", {username: getUsernameBySocketId(socket.id), x: data.x, y: data.y, z: data.z});
 		})
 	} else {
 		console.log(`${socket.id} is attempting to send bot data as non bot - attempted to send pos update` )
-		io.sockets.sockets[socket.id].disconnect();
 	}
 });
 
@@ -124,9 +122,7 @@ socket.on('disconnect', () => {
 			accounts.push(bot.email)
         }
 
-        if (viewers.includes(socket.id)) {
-            viewers.splice(viewers.indexOf(socket.id), 1);
-        }
+        if (viewers.includes(socket.id)) viewers.splice(viewers.indexOf(socket.id), 1);
 
         delete sockets[socket.id];
 
