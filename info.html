@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+<style>
+body {
+    font-family: Arial, sans-serif;
+    background-color: #1E1E1E; /* Dark background color */
+    color: #FFFFFF; /* Light text color */
+    margin: 0;
+    padding: 0;
+}
+
+.box {
+    color: #FF5733;
+    /* max-width: 200px; */
+    background-color: #2A2A2A; /* Darker box background color */
+    border: 2px solid #444;
+    width: fit-content;
+    margin-bottom: 15px;
+    padding: 10px 20px;
+    border-radius: 5px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.parent {
+    width: 80%;
+    margin: 0 auto;
+    display: flex;
+    justify-content: space-between;
+}
+
+.button {
+    background-color: #FF5733;
+    color: #FFFFFF;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+.button:hover {
+    background-color: #FF8552;
+}
+
+input[type="text"] {
+    padding: 8px;
+    border: 1px solid #666;
+    border-radius: 5px;
+    background-color: #2A2A2A; /* Darker input background color */
+    color: #FFFFFF; /* Light text color */
+}
+.sticky{
+    position: sticky;
+}
+
+.center {
+    margin: auto;
+    text-align: center;
+    width: 50%;
+}  
+
+
+</style>
+<div class="sticky center parent">
+    <div id="info" class="box">
+        Hello, User!
+    </div>
+    <div class="box sticky">
+        Command prompt: <br> <input id="commandMsgInputSuffix"><input id="commandMsgInputRoot">
+    </div>
+</div>
+<div class="parent center">
+    <div id="chatDiv" class="box">
+        <h id="chatTitle">Send chat to all bots. <br>Last message: N/a</h>
+        <hr>
+        <!-- <div id="chat">
+            <p class="message">this is the start of the history.</p>
+        </div> -->
+        <!-- <hr style="width:75%;"> -->
+        <input class="center" id="msgInput" value="Message">
+    </div>
+    <div id="chatDiv" class="box">
+        <h id="chatTitle">Send chat to specific bot. <br>Last message: N/a</h>
+        <hr>
+        <!-- <div id="chat">
+            <p class="message">this is the start of the history.</p>
+        </div> -->
+        <!-- <hr style="width:75%;"> -->
+        <input class="center" id="userInput" value="Message">
+        <input class="center" id="msgInput" value="Message">
+    </div>
+
+
+    <!-- <div id="privChatDiv" class="box">
+        <h id="chatTitlePriv">Private chat messages. <br>Last message: N/a</h>
+        <hr>
+        <div id="privChat">
+            <p class="message">this is the start of the history.</p>
+        </div>
+        <hr style="width:75%;">
+        <input id="privMsgInput" value="send private message">
+    </div> -->
+
+    <div id="notYetFriendedDiv" class="box">
+        <h id="playerList">Bots</h>
+        <hr>
+        <ul id="playerListUl">
+            <li>No one yet!</li>
+        </ul>
+    </div>
+</div>
+
+<div class="sticky center parent" id="botsHolder">
+    <!-- Player holder will be dynamically added here -->
+</div>
+
+</div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script>
+    let maxMsg = 5
+    let socket = io.connect();
+    let bots = []
+    let messages = []
+
+    document.getElementById("msgInput").addEventListener("keyup", function(event) {
+    if (event.key === "Enter") {
+        // console.log("enter pressed")
+            sendMsg();
+            this.value = "";
+        }
+    });
+
+    document.getElementById("commandMsgInputRoot").addEventListener("keyup", function(event) {
+    if (event.key === "Enter") {
+        // console.log("enter pressed")
+        commandPrompt();
+        this.value = "";
+        }
+    });
+
+    function getTimeStamp() {
+        const now = new Date();
+        const hours = now.getHours();
+        const minutes = now.getMinutes();
+        const amOrPm = hours >= 12 ? 'PM' : 'AM';
+        const formattedHours = (hours % 12 || 12).toString();
+        const formattedMinutes = minutes.toString().padStart(2, '0');
+        return `${formattedHours}:${formattedMinutes} ${amOrPm}`;
+    }
+
+    function sendMsg(){
+        msg = document.getElementById("msgInput").value
+        
+        socket.emit("sendChat", { forWhich: bots, message: msg });
+        console.log(`sent ${msg} to all`)
+        
+        msg = ""
+    }
+
+    function commandPrompt(){
+        commandMsgInputSuffix = document.getElementById("commandMsgInputSuffix").value
+        commandMsgInputRoot = document.getElementById("commandMsgInputRoot").value
+          commandMsgInputRoot.value = ""
+        socket.emit("command", { toWho: commandMsgInputSuffix, command: commandMsgInputRoot });
+    }
+
+    function addListElement(text, holder){
+        var li = document.createElement("li");
+        li.appendChild(document.createTextNode(text));
+        li.setAttribute("id", `${text}Lol`);
+        document.getElementById(holder).appendChild(li);
+    }
+
+    function createNewBotHolder(username, socketId) {
+        const divId = document.createElement("div");
+          divId.id = `${username}SocketID`;
+          divId.innerText = socketId;
+
+        const div = document.createElement("DIV");
+          div.classList = "box";
+          div.id = username;
+          div.innerText = username;
+          div.style.width = `${parseFloat(getComputedStyle(document.getElementById('botsHolder')).width) / 2}px`;
+
+        const p = document.createElement("P");
+          p.id = `${username}Location`;
+          p.innerText = "N/a";
+
+        const lineBreak = document.createElement("BR");
+
+        const chatDiv = document.createElement("DIV");
+          chatDiv.classList = "box center";
+          chatDiv.id = `${username}ChatHolder`;
+          chatDiv.style.width = `${parseFloat(getComputedStyle(document.getElementById('botsHolder')).width) / 3}px`;
+
+
+        div.appendChild(lineBreak);
+        // div.appendChild(butn);
+        div.appendChild(p);
+        div.appendChild(chatDiv);
+        div.appendChild(divId);
+
+        // Find or create a new row div to contain the player holders
+        let row = document.querySelector('#botsHolder > .row:last-child');
+        if (!row || row.children.length === 2) {
+            row = document.createElement('div');
+            row.classList.add('row');
+            document.getElementById('botsHolder').appendChild(row);
+        }
+        row.appendChild(div);
+    }
+
+    
+	socket.onAny((event, ...args) => {
+		console.log(event, args);
+	});
+	
+    socket.on('endBot', function(data){
+		theSocket = data.socketId
+        username = data.username
+        reason = data.reason
+
+        console.log(`Removed ${username} (${theSocket}) due to ${reason}`)
+        bots = bots.splice(bots.indexOf(username), 1);
+        
+        console.log(bots)
+        
+        document.getElementById(username).innerText = "Hello, world!"
+        document.getElementById(username).remove();
+
+        updateBotList()
+	})
+
+    var serverEmails = 0;
+
+    socket.on('bot', function(data) {
+        botSocket = data.socketId
+        username = data.username
+        emailsLeft = data.emailsLeft
+        
+        bots.push(username)
+        updateBotList()
+        createNewBotHolder(username, botSocket)
+    });
+
+    function updateBotList(){
+        var ul = document.getElementById("playerListUl");
+        var amount = document.getElementById("playerList");
+
+        ul.innerHTML = ""
+
+        amount.innerText = `Total bots: ${bots.length} || Accounts left: ${bots.length - serverEmails}`
+        bots.forEach((element) => addListElement(element, "playerListUl"));
+    }
+
+    socket.on('posUpdate', function(data) {
+        whichBot = data.username
+        x = Math.round(data.x)
+        y = Math.round(data.y)
+        z = Math.round(data.z)
+        
+        posElem = document.getElementById(`${whichBot}Location`)
+        posElem.innerText = `X:${x}\nY:${y}\nZ:${z}`
+    });
+
+    socket.on('chatMsg', (data) => {
+        bot = data.username
+        message = data.message
+
+        console.log(bot, "\n" ,message)
+        addChatDiv(message, bot)
+    });
+    
+    socket.on('privateMsgFrom', (message) => {
+        var title = document.getElementById("chatTitlePriv");
+
+        title.innerText = `Private chat messages. \nLast message: ${getTimeStamp()} `
+        addChatDiv(message, "privChat", "red")
+    });
+
+    socket.on('privateMsgTo', (message) => {
+        addChatDiv(message, "privChat", "green")
+    });
+
+    socket.on("connect", () => {
+        socket.emit("conn", {type: "WebViewer"})
+    });
+    
+    function addChatDiv(message, who, color) {
+        theColor = (color != undefined) ? color : "orange";
+
+        chatHolder = document.getElementById(`${who}ChatHolder`)
+
+        const messageDiv = document.createElement('div');
+            messageDiv.classList.add('message');
+            messageDiv.style.color = theColor
+
+        const mainText = document.createElement('div');
+            mainText.textContent = message;
+        
+        messageDiv.appendChild(mainText);
+        
+        chatHolder.appendChild(messageDiv);
+
+        const messages = chatHolder.querySelectorAll('.message');
+        if (messages.length > maxMsg) {
+            chatHolder.removeChild(messages[0]);
+        }
+    };
+
+setInterval(function() {
+    document.getElementById("info").innerText = `Hello, Exon! \n Theres currently ${bots.length} total bots in the list. \n The time is ${getTimeStamp()}`
+  }, 500);
+    // socket.on('joinData', function(data) {
+    //     document.getElementById("info").innerText = data
+    // });
+
+</script>
+</html>
