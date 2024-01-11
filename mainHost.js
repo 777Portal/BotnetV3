@@ -8,7 +8,6 @@ const path = require('path');
 
 const fs = require('fs');
 const { getPackedSettings } = require('http2');
-const { viewer } = require('prismarine-viewer');
 
 var accounts = ["exampleEmail@notreal.you"] // add ur accounts here ( Ew hardcoded :( ) 
 
@@ -57,36 +56,40 @@ socket.on("reqEmail", () => {
 });
 	
 socket.on("conn", (connInfo) => {
-	if (connInfo.type === "WebViewer") {
-		viewers.push(socket.id);
-	} else if (connInfo.type === "bot") {
-		bots.push({ socketId: socket.id, username: connInfo.username, email: connInfo.email });
-		emailIndex = accounts.indexOf(connInfo.email)
-		accounts.splice(emailIndex, 1);
-		io.emit("bot", { socketId: socket.id, username: connInfo.username, emailsLeft: accounts.length});
-	}
+	
+	if (connInfo.type === "WebViewer") return viewers.push(socket.id); // is viewer.
+	
+	// disconnect bot if its neither WebViewer or bot.
+	else if (connInfo.type !== "bot") return io.sockets.sockets[socket.id].disconnect(); // why is bot undercase when WebViewer is uppercase?
+	
+	// would be bot.
+	bots.push({ socketId: socket.id, username: connInfo.username, email: connInfo.email });
+	  emailIndex = accounts.indexOf(connInfo.email)
+	  accounts.splice(emailIndex, 1);
+	
+	io.emit("bot", { socketId: socket.id, username: connInfo.username, emailsLeft: accounts.length});
 });
-
 
 // web veiwer sending chat message to either all bots or specific.
 socket.on('sendChat', (rawData) => {
-	whoArray = rawData.forWhich
+	whoArray = rawData.forWhich // gets which bots to send to.
 	message = rawData.message
 	whoArray.forEach((username) => {
 		socketId = getSocketIdByUsername(username)
-		io.to(socketId).emit("sendMsg", message);
+		  io.to(socketId).emit("sendMsg", message); // sending to the specific socket
 	})
 })
 
 // routing data from webviews to bots
 socket.on("chatMsg", (data) => {
-	const existingBot = bots.find(bot => bot.socketId === socket.id);
-    if (existingBot) {
+	const existingBot = bots.find(bot => bot.socketId === socket.id); // checking if bot's socket id is in the bot list
+    if (existingBot) { 
 		viewers.forEach(viewer => {
-			io.to(viewer).emit("chatMsg", {username: data.bot, message: data.message});
+			io.to(viewer).emit("chatMsg", {username: data.bot, message: data.message}); // sending data to all of the webviewers connected.
 		})
 	} else {
-		console.log(socket.id)
+		console.log(`${socket.id} is attempting to send bot data as non bot - attempted to send chat message ${data.message}` )
+		io.sockets.sockets[socket.id].disconnect();
 	}
 });
 
@@ -97,7 +100,8 @@ socket.on("posUpdate", (data) => {
 			io.to(viewer).emit("posUpdate", {username: data.username, x: data.x, y: data.y, z: data.z});
 		})
 	} else {
-		console.log(`${socket.id} sent malformed data (sent bot data as viewer and/or undefined.)`)
+		console.log(`${socket.id} is attempting to send bot data as non bot - attempted to send pos update` )
+		io.sockets.sockets[socket.id].disconnect();
 	}
 });
 
