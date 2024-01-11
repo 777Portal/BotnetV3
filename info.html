@@ -118,25 +118,27 @@ input[type="text"] {
 
 <script src="/socket.io/socket.io.js"></script>
 <script>
+    
+    // sorry about the whole unreadable thing.
+
     let maxMsg = 5
     let socket = io.connect();
     let bots = []
     let messages = []
 
     document.getElementById("msgInput").addEventListener("keyup", function(event) {
-    if (event.key === "Enter") {
-        // console.log("enter pressed")
-            sendMsg();
-            this.value = "";
-        }
+        if (event.key !== "Enter") return
+        
+        sendMsg();
+        this.value = "";
     });
 
     document.getElementById("commandMsgInputRoot").addEventListener("keyup", function(event) {
-    if (event.key === "Enter") {
+        if (event.key !== "Enter") return 
         // console.log("enter pressed")
+        
         commandPrompt();
         this.value = "";
-        }
     });
 
     function getTimeStamp() {
@@ -158,12 +160,13 @@ input[type="text"] {
         msg = ""
     }
 
-    function commandPrompt(){
-        commandMsgInputSuffix = document.getElementById("commandMsgInputSuffix").value
-        commandMsgInputRoot = document.getElementById("commandMsgInputRoot").value
-          commandMsgInputRoot.value = ""
-        socket.emit("command", { toWho: commandMsgInputSuffix, command: commandMsgInputRoot });
-    }
+    // function commandPrompt(){
+    //   commandMsgInputSuffix = document.getElementById("commandMsgInputSuffix").value
+    //   commandMsgInputRoot = document.getElementById("commandMsgInputRoot").value
+    //     commandMsgInputRoot.value = ""
+        
+    //   socket.emit("command", { toWho: commandMsgInputSuffix, command: commandMsgInputRoot });
+    // }
 
     function addListElement(text, holder){
         var li = document.createElement("li");
@@ -211,10 +214,9 @@ input[type="text"] {
         row.appendChild(div);
     }
 
-    
-	socket.onAny((event, ...args) => {
-		console.log(event, args);
-	});
+	// socket.onAny((event, ...args) => {
+	// 	console.log(event, args);
+	// });
 	
     socket.on('endBot', function(data){
 		theSocket = data.socketId
@@ -266,22 +268,22 @@ input[type="text"] {
 
     socket.on('chatMsg', (data) => {
         bot = data.username
-        message = data.message
+        message = data.message.extra[0].text
 
         console.log(bot, "\n" ,message)
         addChatDiv(message, bot)
     });
     
-    socket.on('privateMsgFrom', (message) => {
-        var title = document.getElementById("chatTitlePriv");
+    // socket.on('privateMsgFrom', (message) => {
+    //     var title = document.getElementById("chatTitlePriv");
 
-        title.innerText = `Private chat messages. \nLast message: ${getTimeStamp()} `
-        addChatDiv(message, "privChat", "red")
-    });
+    //     title.innerText = `Private chat messages. \nLast message: ${getTimeStamp()} `
+    //     addChatDiv(message, "privChat", "red")
+    // });
 
-    socket.on('privateMsgTo', (message) => {
-        addChatDiv(message, "privChat", "green")
-    });
+    // socket.on('privateMsgTo', (message) => {
+    //     addChatDiv(message, "privChat", "green")
+    // });
 
     socket.on("connect", () => {
         socket.emit("conn", {type: "WebViewer"})
@@ -309,12 +311,9 @@ input[type="text"] {
         }
     };
 
-setInterval(function() {
-    document.getElementById("info").innerText = `Hello, Exon! \n Theres currently ${bots.length} total bots in the list. \n The time is ${getTimeStamp()}`
-  }, 500);
-    // socket.on('joinData', function(data) {
-    //     document.getElementById("info").innerText = data
-    // });
+    setInterval(function() {
+        document.getElementById("info").innerText = `Hello, User! \n Theres currently ${bots.length} total bots in the list. \n The time is ${getTimeStamp()}`
+    }, 500);
 
 </script>
 </html>
