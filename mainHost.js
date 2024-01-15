@@ -9,7 +9,7 @@ const path = require('path');
 const fs = require('fs');
 const { getPackedSettings } = require('http2');
 
-var accounts = ["exampleEmail@notreal.you"] // add ur accounts here ( Ew hardcoded :( ) 
+var accounts = ["socooirafa12345@gmail.com"] // add ur accounts here ( Ew hardcoded :( ) 
 
 // Function to get username by socketId
 function getUsernameBySocketId(socketId) {
@@ -23,21 +23,31 @@ function getSocketIdByUsername(username) {
     return bot ? bot.socketId : null;
 }
 
+async function checkIfSocketIsBot(socketId){
+	const existingBot = await bots.find(bot => bot.socketId === socketId); // checking if bot's socket id is in the bot list
+	
+	if (existingBot) return true // if bot exists return true
+	
+	return false // else return false
+}
+
 const sockets = {};
 const bots = [];
 const viewers = [];
 
 io.on('connection', (socket) => {
-    sockets[socket.id] = socket;
 
-    // Sending existing bots to a new user
-    if (bots.length > 0) {
-        console.log("Sending bots to new user");
-        bots.forEach(bot => {
-          socket.emit('bot', { socketId: bot.socketId, username: bot.username });
-		  console.log("requesting pos update");
-		  io.to(bot.socketId).emit('reqPosUpdate'); // requesting location data...
-		});
+// start of client interactions
+
+sockets[socket.id] = socket;
+	
+// Sending existing bots to a new user
+if (bots.length > 0) {
+    console.log("Sending bots to new user");
+    bots.forEach(bot => {
+		socket.emit('bot', { socketId: bot.socketId, username: bot.username });
+		console.log("requesting pos update");
+	});
 }
 
 // debug stuffz
@@ -56,18 +66,21 @@ socket.on("reqEmail", () => {
 });
 	
 socket.on("conn", (connInfo) => {
-	
 	if (connInfo.type === "WebViewer") return viewers.push(socket.id); // is viewer.
 	
 	// disconnect bot if its neither WebViewer or bot.
-	else if (connInfo.type !== "bot") return io.sockets.sockets[socket.id].disconnect(); // why is bot undercase when WebViewer is uppercase?
+	else if (connInfo.type !== "bot") return // not bot nor the other one
 	
 	// would be bot.
 	bots.push({ socketId: socket.id, username: connInfo.username, email: connInfo.email });
 	  emailIndex = accounts.indexOf(connInfo.email)
 	  accounts = accounts.splice(emailIndex, 1);
 	
-	io.emit("bot", { socketId: socket.id, username: connInfo.username, emailsLeft: accounts.length});
+	if (accounts.length == 1) accounts = []
+	
+
+	io.emit("bot", { socketId: socket.id, username: connInfo.username, emailsLeft: accounts.length}); // notifying clients that a new bot appeared
+	io.to(socket.id).emit('ready'); // telling the bot its okay to send data
 });
 
 // web veiwer sending chat message to either all bots or specific.
@@ -81,26 +94,25 @@ socket.on('sendChat', (rawData) => {
 })
 
 // routing data from webviews to bots
-socket.on("message", (data) => {
-	const existingBot = bots.find(bot => bot.socketId === socket.id); // checking if bot's socket id is in the bot list
-    if (existingBot) { 
-		viewers.forEach(viewer => {
-			io.to(viewer).emit("chatMsg", {username: getUsernameBySocketId(socket.id), message: data}); // sending data to all of the webviewers connected.
-		})
-	} else {
-		console.log(`${socket.id} is attempting to send bot data as non bot - attempted to send chat message ${data.message}` )
-	}
+socket.on("message", async (data) => {
+	isBot = await checkIfSocketIsBot(socket.id)
+	if (!isBot) return console.log( `${socket.id} is attempting to send bot data as non bot - attempted to send chat message ${data.message}` )
+	
+	viewers.forEach(viewer => {
+		io.to(viewer).emit("chatMsg", {username: getUsernameBySocketId(socket.id), message: data}); // sending data to all of the webviewers connected.
+	})
 });
 
-socket.on("move", (data) => {
-	const existingBot = bots.find(bot => bot.socketId === socket.id);
-    if (existingBot) {
-		viewers.forEach(viewer => {
-			io.to(viewer).emit("posUpdate", {username: getUsernameBySocketId(socket.id), x: data.x, y: data.y, z: data.z});
-		})
-	} else {
-		console.log(`${socket.id} is attempting to send bot data as non bot - attempted to send pos update` )
-	}
+socket.on("move", async (data) => {
+	isBot = await checkIfSocketIsBot(socket.id)    
+
+	// isn't bot
+	if (!isBot) return console.log(`${socket.id} is attempting to send bot data as non bot - attempted to send pos update` )
+	
+	// is bot
+	viewers.forEach(viewer => {
+		io.to(viewer).emit("posUpdate", {username: getUsernameBySocketId(socket.id), x: data.x, y: data.y, z: data.z});
+	})
 });
 
 const socketStatus = {};
@@ -127,9 +139,13 @@ socket.on('disconnect', () => {
         delete sockets[socket.id];
 
         delete socketStatus[socket.id];
-    	}
-	});
+    }
 });
+
+}); 
+
+// end of client interactions
+
 
 app.get('/', function(req, res) {
 	// console.log(req)
