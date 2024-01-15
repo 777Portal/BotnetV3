@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <style>
+
 body {
     font-family: Arial, sans-serif;
     background-color: #1E1E1E; /* Dark background color */
@@ -58,7 +59,6 @@ input[type="text"] {
     text-align: center;
     width: 50%;
 }  
-
 
 </style>
 <div class="sticky center parent">
@@ -227,8 +227,6 @@ input[type="text"] {
         bots = bots.splice(bots.indexOf(username), 1);
         
         console.log(bots)
-        
-        document.getElementById(username).innerText = "Hello, world!"
         document.getElementById(username).remove();
 
         updateBotList()
@@ -242,17 +240,17 @@ input[type="text"] {
         emailsLeft = data.emailsLeft
         
         bots.push(username)
-        updateBotList()
+        updateBotList(emailsLeft)
         createNewBotHolder(username, botSocket)
     });
 
-    function updateBotList(){
+    function updateBotList(emailsLeft){
         var ul = document.getElementById("playerListUl");
         var amount = document.getElementById("playerList");
 
         ul.innerHTML = ""
 
-        amount.innerText = `Total bots: ${bots.length} || Accounts left: ${bots.length - serverEmails}`
+        amount.innerText = `Total bots: ${bots.length} || Accounts left: ${emailsLeft}`
         bots.forEach((element) => addListElement(element, "playerListUl"));
     }
 
