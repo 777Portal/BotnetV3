@@ -8,7 +8,9 @@ Fyi this isn't gonna get updated that much, this is more like a baseplate that y
 ### You have to put your own bots in the accounts array in the mainHost.js file
 
 > git clone https://github.com/777Portal/BotnetV3
+
 > node mainHost.js
+
 > node botClient.js (as many accounts you have, this is on different computers)
 
 Then just open either the localhost, or if its online, the address of the machine, and enjoy!
