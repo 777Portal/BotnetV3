@@ -52,7 +52,7 @@ if (bots.length > 0) {
 
 // debug stuffz
 socket.onAny((event, ...args) => {
-	console.log(event, args);
+	// console.log(event, args);
 });
 	
 // init defining what type and how
@@ -74,10 +74,11 @@ socket.on("conn", (connInfo) => {
 	// would be bot.
 	bots.push({ socketId: socket.id, username: connInfo.username, email: connInfo.email });
 	  emailIndex = accounts.indexOf(connInfo.email)
-	  accounts = accounts.splice(emailIndex, 1);
+	  accounts.splice(emailIndex, 1);
 	
-	if (accounts.length == 1) accounts = []
-	
+	// if (accounts.length == 1) accounts = [];
+
+	console.log(accounts)
 
 	io.emit("bot", { socketId: socket.id, username: connInfo.username, emailsLeft: accounts.length}); // notifying clients that a new bot appeared
 	io.to(socket.id).emit('ready'); // telling the bot its okay to send data
